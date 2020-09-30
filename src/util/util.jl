@@ -184,20 +184,26 @@ Returns the line width (units of λ) for specified fractional line depth (defaul
 Assumes continuum is the maximum flux provided.
 """
 function calc_line_width(λ::AbstractArray{T1,1}, flux::AbstractArray{T2,1}; frac_depth::Real = 0.5 ) where { T1<:Real, T2<:Real }
-   @assert 0.05 <= frac_depth <= 0.99
-   idx_min_flux = argmin(flux)
-   min_flux = flux[idx_min_flux]
-   continuum = maximum(flux)
-   depth = 1.0 - min_flux/continuum
-   target_flux = continuum*(1-frac_depth*depth)
-   idxhi = idx_min_flux-1+searchsortedfirst(view(flux,idx_min_flux:length(flux)), target_flux)
-   idxlo = idxhi-1
-   λ_hi = RvSpectML.interp_linear(x1=flux[idxlo],x2=flux[idxhi],y1=λ[idxlo],y2=λ[idxhi],xpred=target_flux)
-   idxlo = idx_min_flux+1-searchsortedfirst(view(flux,idx_min_flux:-1:1), target_flux )
-   idxhi = idxlo+1
-   λ_lo = RvSpectML.interp_linear(x1=flux[idxlo],x2=flux[idxhi],y1=λ[idxlo],y2=λ[idxhi],xpred=target_flux)
-   width = λ_hi-λ_lo
-   return width
+    @assert 0.05 <= frac_depth <= 0.99
+    idx_min_flux = argmin(flux)
+    min_flux = flux[idx_min_flux]
+    continuum = maximum(flux)
+    depth = 1.0 - min_flux/continuum
+    target_flux = continuum*(1-frac_depth*depth)
+    idxhi = idx_min_flux-1+searchsortedfirst(view(flux,idx_min_flux:length(flux)), target_flux)
+    if idxhi > length(flux) #if the target flux cannot be found on the right side of the line, return NaN
+        return NaN
+    end
+    idxlo = idxhi-1
+    λ_hi = RvSpectML.interp_linear(x1=flux[idxlo],x2=flux[idxhi],y1=λ[idxlo],y2=λ[idxhi],xpred=target_flux)
+    idxlo = idx_min_flux+1-searchsortedfirst(view(flux,idx_min_flux:-1:1), target_flux )
+    if idxlo < 1 #if the target flux cannot be found on the left side of the line, return NaN
+        return NaN
+    end
+    idxhi = idxlo+1
+    λ_lo = RvSpectML.interp_linear(x1=flux[idxlo],x2=flux[idxhi],y1=λ[idxlo],y2=λ[idxhi],xpred=target_flux)
+    width = λ_hi-λ_lo
+    return width
 end
 
 """ calc_line_bisector_at_frac_depth(λ, flux, frac_depth )
@@ -205,22 +211,28 @@ Returns the line average of wavelengths (units of λ) at specified fractional li
 Assumes continuum is the maximum flux provided.
 """
 function calc_line_bisector_at_frac_depth(λ::AbstractArray{T1,1}, flux::AbstractArray{T2,1}, frac_depth::Real ) where { T1<:Real, T2<:Real }
-   @assert 0.05 <= frac_depth <= 0.99
-   idx_min_flux = argmin(flux)
-   min_flux = flux[idx_min_flux]
-   continuum = maximum(flux)
-   depth = 1.0 - min_flux/continuum
-   abs_depth = frac_depth*depth
+    @assert 0.05 <= frac_depth <= 0.99
+    idx_min_flux = argmin(flux)
+    min_flux = flux[idx_min_flux]
+    continuum = maximum(flux)
+    depth = 1.0 - min_flux/continuum
+    abs_depth = frac_depth*depth
 
-   target_flux = continuum*(1-frac_depth*depth)
-   idxhi = idx_min_flux-1+searchsortedfirst(view(flux,idx_min_flux:length(flux)), target_flux)
-   idxlo = idxhi-1
-   λ_hi = RvSpectML.interp_linear(x1=flux[idxlo],x2=flux[idxhi],y1=λ[idxlo],y2=λ[idxhi],xpred=target_flux)
-   idxlo = idx_min_flux+1-searchsortedfirst(view(flux,idx_min_flux:-1:1), target_flux )
-   idxhi = idxlo+1
-   λ_lo = RvSpectML.interp_linear(x1=flux[idxlo],x2=flux[idxhi],y1=λ[idxlo],y2=λ[idxhi],xpred=target_flux)
-   bisector = (λ_hi+λ_lo)/2
-   return bisector
+    target_flux = continuum*(1-frac_depth*depth)
+    idxhi = idx_min_flux-1+searchsortedfirst(view(flux,idx_min_flux:length(flux)), target_flux)
+    if idxhi > length(flux) #if the target flux cannot be found on the right side of the line, return NaN
+        return NaN
+    end
+    idxlo = idxhi-1
+    λ_hi = RvSpectML.interp_linear(x1=flux[idxlo],x2=flux[idxhi],y1=λ[idxlo],y2=λ[idxhi],xpred=target_flux)
+    idxlo = idx_min_flux+1-searchsortedfirst(view(flux,idx_min_flux:-1:1), target_flux )
+    if idxlo < 1 #if the target flux cannot be found on the left side of the line, return NaN
+        return NaN
+    end
+    idxhi = idxlo+1
+    λ_lo = RvSpectML.interp_linear(x1=flux[idxlo],x2=flux[idxhi],y1=λ[idxlo],y2=λ[idxhi],xpred=target_flux)
+    bisector = (λ_hi+λ_lo)/2
+    return bisector
 end
 
 """ calc_line_bisector_at_frac_depth(λ, flux, abs_depth )
